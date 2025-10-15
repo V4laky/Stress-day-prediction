@@ -3,11 +3,15 @@ __pycache__/
 market_risk_venv/
 
 # results
-results/
+results/figures/*
+results/models/*
+results/*.csv
+results/*.pdf
+results/*.jsonl
 
 # Data
-data/raw/
-data/processed/
+data/raw/*
+data/processed/*
 
 # Jupyter
 .ipynb_checkpoints/
