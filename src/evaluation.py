@@ -34,6 +34,7 @@ def log_trials_to_csv(df, file_path=None, append = False):
         df.to_csv(file_path, index=False)
     else:
         df.to_csv(file_path, mode='a', header=False, index=False)
+    print(f'Saved trials dataframe at {file_path}')
 
 
 def give_metrics(y_true, y_pred, y_pred_proba=None, df=None, model_name ='Model'):

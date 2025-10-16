@@ -1,17 +1,26 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import yfinance as yf
 
-def get_or_download_index(symbol: str, download_fn, data_dir="data/raw"):
+def has_timeframe(df: pd.DataFrame, start: str, end: str, grace_days: int = 0):
+    start_ts = pd.to_datetime(start)
+    end_ts = pd.to_datetime(end)
+    df_start = df.index.min()
+    df_end = df.index.max()
+    return (df_start <= start_ts - pd.Timedelta(days=grace_days) and
+            df_end >= end_ts + pd.Timedelta(days=grace_days))
+
+
+
+def get_or_download_index(ticker: str, start="2010-01-01", end="2023-01-01", data_dir="data"):
     """
-    Checks if CSV for index exists, otherwise downloads it.
+    Checks if CSV for index exists, otherwise downloads it using yfinance.
 
     Parameters
     ----------
-    symbol : str
-        Ticker or name of the index (e.g. "SP500").
-    download_fn : callable
-        Function that downloads data and returns a DataFrame.
+    ticker : str
+        Ticker of the index.
     data_dir : str
         Directory where data should be stored.
 
@@ -21,19 +30,25 @@ def get_or_download_index(symbol: str, download_fn, data_dir="data/raw"):
     
     """
 
-    path = Path(data_dir)
+    path = Path(data_dir / 'raw')
     path.mkdir(parents=True, exist_ok=True)
-    file_path = path / f"{symbol}.csv"
+    file_path = path / f"{ticker}.csv"
 
     if file_path.exists():
-        print(f"Found existing data for {symbol}, loading from {file_path}")
+        print(f"Found existing data for {ticker}, loading from {file_path}")
         df = pd.read_csv(file_path, parse_dates=True, index_col=0)
 
-    else:
-        print(f"No local data found for {symbol}, downloading...")
-        df = download_fn(symbol)
-        df.to_csv(file_path)
-        print(f"Saved data to {file_path}")
+        # 3 grace days for non trading days
+        if has_timeframe(df, start, end, 3):
+            return df
+
+    
+    print(f"No local data found for {ticker}, downloading...")
+
+    df = yf.download(ticker, start=start, end=end)
+    df.columns = df.columns.get_level_values(0)
+    df.to_csv(file_path)
+    print(f"Saved data to {file_path}")
 
     return df
 
@@ -55,6 +70,9 @@ def process_data(price_series, stress_threshold=np.log(0.98), vix_series=None):
 
     # TODO: check and talk more about stationarity
     # IMPORTANT: Dont use stats that look ahead (e.g. mean, std of whole timeseries)
+
+
+
 
     price_series = pd.Series(np.squeeze(price_series.values), index=price_series.index, dtype=float)
 
@@ -126,3 +144,30 @@ def process_data(price_series, stress_threshold=np.log(0.98), vix_series=None):
     df.drop('close', axis=1, inplace=True)
 
     return df
+
+def load_data(ticker: str, start="2010-01-01", end="2023-01-01", data_dir="data/", grace_days=3):
+    
+    data_dir = Path(data_dir)
+    file_path = Path(data_dir / 'processed/{ticker}_processed.csv')
+
+    if file_path.exists():
+        df = pd.read_csv(file_path, parse_dates=True, index_col=0)
+
+        # 3 grace days for non trading days
+        if has_timeframe(df, start, end, grace_days):
+            print(f"Found existing processed data for {ticker}, loading from {file_path}")
+            return df
+
+        print("Existing processed data doesnt contain timeframe")
+    
+    data = get_or_download_index(ticker, start, end, data_dir)
+    vix = get_or_download_index("^VIX", start, end, data_dir)
+
+    processed = process_data(data['Close'], vix_series=vix['Close'])
+
+    output_path = data_dir / "processed"
+    output_path.mkdir(parents=True, exist_ok=True)
+    processed.to_csv(data_dir / f"processed/{ticker}_processed.csv")
+    print(f"Saved processed data to {output_path}/{ticker}_processed.csv")
+
+    return processed
