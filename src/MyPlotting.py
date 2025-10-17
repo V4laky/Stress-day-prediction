@@ -107,7 +107,7 @@ def plot_pr_curve(y_true, X_test, models, model_names=["Model"], curve_type='PR'
 
 
 
-def plot_curves_in_one(y_test, y_pred_proba_dict, identifier='', save_png=False, file_path=None):
+def plot_curves_in_one(y_test, y_pred_proba_dict, identifier='', save_png=False, file_path=None, show=True):
     """
     Plots Precision-Recall and ROC curves for multiple models in one figure.
 
@@ -153,10 +153,12 @@ def plot_curves_in_one(y_test, y_pred_proba_dict, identifier='', save_png=False,
             plt.savefig(f'curves_{identifier}.png', dpi=300)
         else:
             plt.savefig(file_path / f'curves_{identifier}', dpi=300)
-    plt.show()
+            print(f"Saved {file_path}/curves_{identifier}")
+    if show:
+        plt.show()
 
 def plot_permutation_importance_v2(eval_dict, models_dict, n_repeats=30, scoring='roc_auc', 
-                                   save_png = False, file_path=None, identifier=''):
+                                   save_png = False, file_path=None, identifier='', show=True):
     """
     Compute and plot permutation feature importance as a boxplot for multiple models.
 
@@ -214,10 +216,13 @@ def plot_permutation_importance_v2(eval_dict, models_dict, n_repeats=30, scoring
             plt.savefig(f'perm_imp_{identifier}.png', dpi=300)
         else:
             plt.savefig(file_path / f'perm_imp_{identifier}', dpi=300)
-    plt.show()
+            print(f"Saved {file_path}/perm_imp_{identifier}")
+    
+    if show:
+        plt.show()
 
 
-def plot_abs_importances(imp_df, save_png=False, file_path=None, identifier=""):
+def plot_abs_importances(imp_df, save_png=False, file_path=None, identifier="", show=True):
     
     cols = imp_df.columns
 
@@ -235,9 +240,10 @@ def plot_abs_importances(imp_df, save_png=False, file_path=None, identifier=""):
             plt.savefig(f'abs_imp_{identifier}.png', dpi=300)
         else:
             plt.savefig(file_path / f'abs_imp_{identifier}', dpi=300)    
+            print(f"Saved {file_path}/abs_imp_{identifier}")
     
-    
-    plt.show()
+    if show:
+        plt.show()
 
 
 

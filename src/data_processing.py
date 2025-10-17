@@ -8,8 +8,8 @@ def has_timeframe(df: pd.DataFrame, start: str, end: str, grace_days: int = 0):
     end_ts = pd.to_datetime(end)
     df_start = df.index.min()
     df_end = df.index.max()
-    return (df_start <= start_ts - pd.Timedelta(days=grace_days) and
-            df_end >= end_ts + pd.Timedelta(days=grace_days))
+    return (df_start <= start_ts + pd.Timedelta(days=grace_days) and
+            df_end >= end_ts - pd.Timedelta(days=grace_days))
 
 
 
@@ -40,8 +40,8 @@ def get_or_download_index(ticker: str, start="2010-01-01", end="2023-01-01", dat
 
         # 3 grace days for non trading days
         if has_timeframe(df, start, end, 3):
+            print('Existing data contains timeframe.')
             return df
-
     
     print(f"No local data found for {ticker}, downloading...")
 
@@ -148,13 +148,15 @@ def process_data(price_series, stress_threshold=np.log(0.98), vix_series=None):
 def load_data(ticker: str, start="2010-01-01", end="2023-01-01", data_dir="data/", grace_days=3):
     
     data_dir = Path(data_dir)
-    file_path = Path(data_dir / 'processed/{ticker}_processed.csv')
+    file_path = Path(data_dir / f'processed/{ticker}_processed.csv')
 
     if file_path.exists():
         df = pd.read_csv(file_path, parse_dates=True, index_col=0)
 
+        # band-aid solution to rolling features making df start later
+        late_start = pd.to_datetime(start) + pd.Timedelta(days=60) 
         # 3 grace days for non trading days
-        if has_timeframe(df, start, end, grace_days):
+        if has_timeframe(df, late_start, end, grace_days):
             print(f"Found existing processed data for {ticker}, loading from {file_path}")
             return df
 

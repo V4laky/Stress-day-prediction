@@ -1,7 +1,7 @@
 data:
   ticker: "^GSPC"
-  start: "2010-01-01"
-  end: "2023-01-01"
+  start: "2010-01-01" # start of training set
+  end: "2023-01-01"   # end of evaluation set
   split_date: "2019-01-01"
 
 features:
@@ -25,3 +25,16 @@ training:
   model: "xgb"         # rf, xgb, or lgbm
   n_optuna_trials: 20
   top_n_models: 5
+
+evaluation:
+  model_names:
+   - "xgb_trial_1"
+   - "xgb_trial_2"
+   - "xgb_trial_3"
+   - "xgb_trial_4"
+   - "xgb_trial_5"
+  eval_tickers:
+   - "^GSPC"
+   - "^IXIC"
+   - "^GDAXI"
+  pdf_report_name: "xgb_report.pdf"

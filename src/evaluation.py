@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from joblib import load
+from src.utils import best_threshold
 
 def log_experiment(model_name, params, metrics, cv_scheme, features, extra_notes="", 
                    project_root=Path().resolve().parent, artifacts="", file_name="top_models.jsonl"):
@@ -143,3 +144,73 @@ def load_top_models(jsonl_path, models_dir):
                 print(f"[WARN] Model file {model_file} not found. Skipping.")
     
     return models_dict, metrics_dict
+
+
+def load_and_eval_models(model_names, train_sets_dict, project_root):
+    """
+    train_sets_dict : ticker:(X_test, y_test)
+
+    returns models, proba_series, feat_imp_df, metrics_df, params_df, folds_df
+    """
+
+    models = {}
+    folds_dict = {}
+    params_dict = {}
+
+    # load models
+    model_dir = Path(project_root / "results/models")
+    for name in model_names:
+        model = load(model_dir / f'{name}.joblib')
+        models[name] = model
+    
+    # make predictions dicts/series
+    proba_dict = {}
+    pred_dict = {}
+    best_thresholds = {}
+
+    for name, model in models.items():
+        for market, (X_test, y_test) in train_sets_dict.items():
+            proba_dict[(market, name)] = model.predict_proba(X_test)[:, 1]
+            best_thresholds[(market, name)] = best_threshold(y_test, proba_dict[(market, name)])
+            pred_dict[(market, name)] = proba_dict[(market, name)] > best_thresholds[(market, name)]
+    proba_series = pd.Series(proba_dict)
+
+    # make metrics dataframe    
+    metrics_df = pd.DataFrame()
+    for (market, name) in proba_dict:
+        y_test = train_sets_dict[market][1]
+        metrics_df = give_metrics(y_test, pred_dict[(market,name)], proba_dict[(market, name)], df=metrics_df, model_name=f"{market} - {name}")
+
+    # append best threshold to metrics
+    metrics_df.index = pd.MultiIndex.from_tuples([tuple(i.split(' - ')) for i in metrics_df.index], names=["Market", "Model"])
+    metrics_df['best_thresholds'] = pd.Series(best_thresholds)
+
+    # make feature importance dataframe
+    feat_imp_dict = {}
+    for name, model in models.items():
+        feat_imp_dict[name] = {k:v for (k,v) in zip(X_test.columns.tolist(), model.feature_importances_)}
+    feat_imp_df = pd.DataFrame(feat_imp_dict)
+
+    # make params and folds dataframe
+    for name, model in models.items():
+        params_dict[name] = model.get_params()
+        folds_dict[name] = model.user_attrs["folds"]
+
+    params_df = pd.DataFrame(params_dict)
+    folds_df = pd.DataFrame(folds_dict)
+
+    params_df.dropna(inplace=True)
+    params_df = params_df.T
+    # Identify columns that are fully numeric
+    numeric_cols = []
+    for col in params_df.columns:
+        # Try to convert to numeric
+        numeric = pd.to_numeric(params_df[col], errors="coerce")
+        # If there are no NaNs, the column is fully numeric
+        if numeric.notna().all():
+            numeric_cols.append(col)
+            # Replace the column with converted floats
+            params_df[col] = numeric
+    params_df = params_df.round(4).T
+    
+    return models, proba_series, feat_imp_df, metrics_df, params_df, folds_df

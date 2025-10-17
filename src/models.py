@@ -61,6 +61,7 @@ def build_xgb(trial=None, params=None):
             learning_rate=trial.suggest_float('learning_rate', 0.01, 0.3),
             subsample=trial.suggest_float('subsample', 0.5, 1.0),
             colsample_bytree=trial.suggest_float('colsample_bytree', 0.5, 1.0),
+            scale_pos_weight=trial.suggest_int("scale_pos_weight", 20, 100),
             random_state=42,
             n_jobs=-1
         )

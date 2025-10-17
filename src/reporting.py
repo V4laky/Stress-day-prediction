@@ -94,3 +94,4 @@ def make_pdf_report(metrics_df, model_params_df, folds_df, indexes, results_path
     story.append(img)
 
     doc.build(story)
+    print(f'Saved pdf report to: {results_path}/{filename}')

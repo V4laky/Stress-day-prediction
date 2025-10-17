@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 import sys
 
@@ -13,7 +14,20 @@ import yaml
 
 def main():
 
-    with open(repo_root/"configs/config.yaml", "r") as f:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to YAML config file"
+    )
+    args = parser.parse_args()
+
+    config_path = Path(args.config)
+    if not config_path.is_absolute():
+        config_path = repo_root / config_path
+
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
     ticker = config["data"]["ticker"]
@@ -32,8 +46,8 @@ def main():
 
     data = load_data(ticker, start, end, project_root / 'data')
 
-    X_train, X_test = data.loc[:split_date].drop('Stress', axis=1), data.loc[split_date:].drop('Stress', axis=1)
-    y_train, y_test = data.loc[:split_date, 'Stress'], data.loc[split_date:, 'Stress']
+    X_train, X_test = data.loc[start:split_date].drop('Stress', axis=1), data.loc[split_date:end].drop('Stress', axis=1)
+    y_train, y_test = data.loc[start:split_date, 'Stress'], data.loc[split_date:end, 'Stress']
 
     missing = set(features) - set(data.columns)
     if missing:
