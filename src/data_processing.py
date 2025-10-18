@@ -3,6 +3,8 @@ import pandas as pd
 from pathlib import Path
 import yfinance as yf
 
+from src.features import *
+
 def has_timeframe(df: pd.DataFrame, start: str, end: str, grace_days: int = 0):
     start_ts = pd.to_datetime(start)
     end_ts = pd.to_datetime(end)
@@ -72,8 +74,6 @@ def process_data(price_series, stress_threshold=np.log(0.98), vix_series=None):
     # IMPORTANT: Dont use stats that look ahead (e.g. mean, std of whole timeseries)
 
 
-
-
     price_series = pd.Series(np.squeeze(price_series.values), index=price_series.index, dtype=float)
 
     # core features
@@ -92,55 +92,30 @@ def process_data(price_series, stress_threshold=np.log(0.98), vix_series=None):
     # Target variable
     df['Stress'] = df['log_returns'].shift(-1) < stress_threshold
 
-    # Rolling volatility
-    df['20_day_rolling_volatility'] = df['log_returns'].rolling(20).std()
-    df['5_day_rolling_volatility'] = df['log_returns'].rolling(5).std()
+    add_rolling_volatility(df, [5, 20])
 
-    # SMA and momentum
-    df['SMA_20'] = df['close'].rolling(20).mean()
-    df['SMA_10'] = df['close'].rolling(10).mean()
-    df['SMA_5'] = df['close'].rolling(5).mean()
-    df['SMA_3'] = df['close'].rolling(3).mean()
+    add_SMA(df, [3, 5, 10, 20])
 
-    df['Momentum5_20'] = (df['SMA_5'] / df['SMA_20']) -1 # for mean 0
-    df['Momentum10_20'] = (df['SMA_10'] / df['SMA_20']) -1
-    df['Momentum5_10'] = (df['SMA_5'] / df['SMA_10']) -1
-    df['Momentum3_20'] = (df['SMA_3'] / df['SMA_20']) -1
-    df['Momentum3_10'] = (df['SMA_3'] / df['SMA_10']) -1
-    df['Momentum3_5'] = (df['SMA_3'] / df['SMA_5']) -1
+    add_momentum(df, [(3,5), (3,10), (3,20), (5,10), (5,20), (10,20)])
 
+    add_rolling_return(df, [5, 10])
 
-    # Rolling return
-    df['10_day_rolling_return'] = df['log_returns'].rolling(10).mean()
-    df['5_day_rolling_return'] = df['log_returns'].rolling(5).mean()
+    add_scaled_lag_return(df, [(i, 20) for i in range(1,21)])
 
-    df['Scaled_Lag_1d'] = df['log_returns'].shift(1) / df['20_day_rolling_volatility']
-    df['Scaled_Lag_3d'] = df['log_returns'].shift(3) / df['20_day_rolling_volatility']
-    df['Scaled_Lag_5d'] = df['log_returns'].shift(5) / df['20_day_rolling_volatility']
+    add_scaled_lag_weighted_avg(df, start=1, end=20, scaling_vol=20, alpha=.8)
 
-    df['Scaled_weighted_avg'] = (df['Scaled_Lag_1d']*.6 + df['Scaled_Lag_3d']*.3 + df['Scaled_Lag_5d']*.1)
-    # Skew and kurtosis
+    add_skew(df, [20])
+    add_kurt(df, [20])
 
-    df['Skew_20'] = df['log_returns'].rolling(20).skew()
-    df['Kurt_20'] = df['log_returns'].rolling(20).kurt()
+    add_volatility_ratios(df,[(5,20), (5,'VIX'), (20,'VIX')])
 
-    # volatility ratios
-    df['Vol_momentum'] = (df['5_day_rolling_volatility'] / df['20_day_rolling_volatility']) -1
-    df['Vol20/VIX'] = df['20_day_rolling_volatility'] / df['VIX']
-    df['Vol5/VIX'] = df['5_day_rolling_volatility'] / df['VIX']
+    add_sharpe_like(df, [(10,20), (5,20)])
 
-    # Sharpe-like ratios
-    df['Sharpe-like_10'] = df['10_day_rolling_return'] / df['20_day_rolling_volatility']
-    df['Sharpe-like_5'] = df['5_day_rolling_return'] / df['20_day_rolling_volatility']
-
-    # return and VIX z-score
-    df['log_returns_zscore'] = (df['log_returns'] - df['10_day_rolling_return']) / df['20_day_rolling_volatility']
-    df['VIX_zscore'] = (df['VIX'] - df['VIX'].rolling(10).mean()) / df['VIX'].rolling(20).std()
+    add_z_scores(df, ['log_returns', "VIX"], look_back=20)
 
     df.replace([np.inf, -np.inf], np.nan, inplace=True) # for division issues
     df.dropna(inplace=True)
 
-    df.drop(['SMA_20', 'SMA_5'], axis=1, inplace=True)
     df.drop('close', axis=1, inplace=True)
 
     return df

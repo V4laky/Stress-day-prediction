@@ -1,0 +1,23 @@
+# this file just compiles all possible features that are computed into the processed data
+
+-'log_returns'
+- 'VIX', 
+- '5_day_rolling_volatility', '20_day_rolling_volatility'
+- 'SMA_3', 'SMA_5', 'SMA_10', 'SMA_20'
+- 'Momentumn3_5', 'Momentumn3_10', 'Momentumn3_20', 'Momentumn5_10'
+  'Momentumn5_20', 'Momentumn10_20', 
+- '5_day_rolling_return', '10_day_rolling_return'
+- 'lag_return_1/vol20', 'lag_return_2/vol20'
+  'lag_return_3/vol20', 'lag_return_4/vol20', 'lag_return_5/vol20'
+  'lag_return_6/vol20', 'lag_return_7/vol20', 'lag_return_8/vol20'
+  'lag_return_9/vol20', 'lag_return_10/vol20', 'lag_return_11/vol20'
+  'lag_return_12/vol20', 'lag_return_13/vol20', 'lag_return_14/vol20'
+  'lag_return_15/vol20', 'lag_return_16/vol20', 'lag_return_17/vol20'
+  'lag_return_18/vol20', 'lag_return_19/vol20', 'lag_return_20/vol20'
+  'EWLR_0.8_1-20/20'
+- 'Skew_20'
+- 'Kurt_20'
+- 'Vol_momentum_5_20',
+- 'VOL5/VIX', 'VOL20/VIX', 
+- 'Sharpe-like_10/20', 'Sharpe-like_5/20',
+- 'log_returns_z_20', 'VIX_z_20'

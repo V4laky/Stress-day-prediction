@@ -21,20 +21,38 @@ features:
  - 'Momentum3_5'
  - 'Scaled_weighted_avg'
 
+features:
+ - 'VOL5/VIX'
+ - 'VOL20/VIX'
+ - 'lag_return_1/vol20'
+ - 'lag_return_2/vol20'
+ - 'lag_return_3/vol20'
+ - 'Sharpe-like_10/20'
+ - 'Sharpe-like_5/20'
+ - 'log_returns_z_20'
+ - 'VIX_z_20'
+ - 'Momentumn3_5'
+ - 'Momentumn3_10'
+ - 'Momentumn3_20'
+ - 'Momentumn5_10'
+ - 'Momentumn5_20'
+ - 'Momentumn10_20'
+ - 'EWLR_0.8_1-20/20'
+
 training:
-  model: "xgb"         # rf, xgb, or lgbm
+  model: "lgbm"         # rf, xgb, or lgbm
   n_optuna_trials: 20
   top_n_models: 5
 
 evaluation:
   model_names:
-   - "xgb_trial_1"
-   - "xgb_trial_2"
-   - "xgb_trial_3"
-   - "xgb_trial_4"
-   - "xgb_trial_5"
+   - "lgbm_trial_1"
+   - "lgbm_trial_2"
+   - "lgbm_trial_3"
+   - "lgbm_trial_4"
+   - "lgbm_trial_5"
   eval_tickers:
    - "^GSPC"
    - "^IXIC"
    - "^GDAXI"
-  pdf_report_name: "xgb_report.pdf"
+  pdf_report_name: "lgbm_report.pdf"

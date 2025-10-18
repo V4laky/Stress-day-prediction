@@ -54,8 +54,13 @@ def main():
         raise ValueError(f"Features not found in data: {missing}")
     X_train, X_test = X_train[features], X_test[features]
 
+    pos = y_train.sum()
+    neg = len(y_train) - pos
+    scale_pos_weight = neg / pos if pos > 0 else 1
+
     def objective_wrapper(trial):
-        return objective(trial, model_type=model_type, X_train=X_train, y_train=y_train)
+        return objective(trial, model_type=model_type, X_train=X_train, 
+                         y_train=y_train, scale_pos_weight=scale_pos_weight)
 
     study = optuna.create_study(direction='maximize', sampler=optuna.samplers.RandomSampler(seed=42))
     study.optimize(objective_wrapper, n_trials=n_optuna_trials, n_jobs=-1)

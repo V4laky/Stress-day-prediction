@@ -34,8 +34,10 @@ def cross_val(model, tscv, X_train, y_train, alpha=0.8, scoring='average precisi
 
     return np.sum(weighted_scores) / np.sum(weights), scores
 
-def build_rf(trial=None, params=None):
+def build_rf(trial=None, params=None, **kwargs):
     if params is not None:
+        params['class_weight'] = 'balanced'
+        params['random_state'] = 42
         return RandomForestClassifier(**params)
     elif trial is not None:
         return RandomForestClassifier(
@@ -51,8 +53,11 @@ def build_rf(trial=None, params=None):
     else:
         raise ValueError("Either trial or params must be provided")
 
-def build_xgb(trial=None, params=None):
+def build_xgb(trial=None, params=None, scale_pos_weight=None):
     if params is not None:
+        if scale_pos_weight is not None:
+            params['scale_pos_weight'] = scale_pos_weight
+        params['random_state'] = 42
         return XGBClassifier(**params)
     if trial is not None:
         return XGBClassifier(
@@ -61,7 +66,7 @@ def build_xgb(trial=None, params=None):
             learning_rate=trial.suggest_float('learning_rate', 0.01, 0.3),
             subsample=trial.suggest_float('subsample', 0.5, 1.0),
             colsample_bytree=trial.suggest_float('colsample_bytree', 0.5, 1.0),
-            scale_pos_weight=trial.suggest_int("scale_pos_weight", 20, 100),
+            scale_pos_weight=scale_pos_weight,
             random_state=42,
             n_jobs=-1
         )
@@ -69,8 +74,11 @@ def build_xgb(trial=None, params=None):
         raise ValueError("Either trial or params must be provided")
     
     
-def build_lgbm(trial=None, params=None):
+def build_lgbm(trial=None, params=None, scale_pos_weight=None):
     if params is not None:
+        if scale_pos_weight is not None:
+            params['scale_pos_weight'] = scale_pos_weight
+        params['random_state'] = 42
         return LGBMClassifier(**params)
     elif trial is not None:
         return LGBMClassifier(
@@ -80,7 +88,7 @@ def build_lgbm(trial=None, params=None):
             num_leaves=trial.suggest_int('num_leaves', 31, 256),
             subsample=trial.suggest_float('subsample', 0.5, 1.0),
             colsample_bytree=trial.suggest_float('colsample_bytree', 0.5, 1.0),
-            class_weight='balanced',
+            scale_pos_weight=scale_pos_weight,
             random_state=42,
             n_jobs=-1
         )        
@@ -93,8 +101,8 @@ MODEL_BUILDERS = {
     'lgbm': build_lgbm
 }
 
-def objective(trial, model_type, X_train, y_train, alpha=0.8, scoring='average precision'):
-    model = MODEL_BUILDERS[model_type](trial)
+def objective(trial, model_type, X_train, y_train, alpha=0.8, scoring='average precision', scale_pos_weight=None):
+    model = MODEL_BUILDERS[model_type](trial, scale_pos_weight=scale_pos_weight)
     tscv = TimeSeriesSplit(n_splits=5)
     score, folds = cross_val(model, tscv, X_train, y_train, alpha, scoring)
     trial.set_user_attr('folds', folds)
