@@ -71,7 +71,7 @@ def main():
     results_dir.mkdir(parents=True, exist_ok=True)
     log_trials_to_csv(study_df, results_dir / f'{model_type}_trials.csv', append=False)
 
-    train_top_models(X_train, y_train, study, model_type, top_n_models, save_dir=results_dir/'models')
+    train_top_models(X_train, y_train, study, model_type, top_n_models, scale_pos_weight, save_dir=results_dir/'models')
 
 if __name__ == "__main__":
     main()

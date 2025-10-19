@@ -1,6 +1,7 @@
 import numpy as np
+import pandas as pd
 from sklearn.metrics import average_precision_score
-from sklearn.model_selection import TimeSeriesSplit
+from sklearn.model_selection import TimeSeriesSplit, cross_validate
 from pathlib import Path
 from joblib import dump
 
@@ -9,30 +10,114 @@ from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 
 
-def cross_val(model, tscv, X_train, y_train, alpha=0.8, scoring='average precision'):
-    """
-    for now only 'average precision' is implemented.
-    """
-    
-    scores = []
 
-    for train_idx, val_idx in tscv.split(X_train):
-        X_t, X_v = X_train.iloc[train_idx], X_train.iloc[val_idx]
-        y_t, y_v = y_train.iloc[train_idx], y_train.iloc[val_idx]
+SCORING = {
+    'accuracy': 'accuracy',
+    'precision': 'precision',
+    'recall': 'recall',
+    'f1': 'f1',
+    'roc_auc': 'roc_auc',
+    'average_precision': 'average_precision'
+}
+
+def timeseries_multiple_cv_scoring(X_train, y_train, models_dict, tscv, scoring = SCORING, alpha=.8):
+    """
+    Perform time series cross-validation for multiple models and compute 
+    weighted mean and standard deviation of multiple metrics.
+
+    Parameters
+    ----------
+    X_train : array-like or DataFrame
+        Feature matrix used for training.
+    
+    y_train : array-like
+        Target vector corresponding to X_train.
+    
+    models_dict : dict
+        Dictionary of models to evaluate, with structure:
+        {
+            "ModelName1": estimator1,
+            "ModelName2": estimator2,
+            ...
+        }
+    
+    tscv : cross-validation generator
+        A time series cross-validator (e.g. TimeSeriesSplit).
+    
+    scoring : list or dict of str, default=SCORING
+        Scoring metrics to evaluate. Should match valid metrics for 
+        `sklearn.model_selection.cross_validate`.
+    
+    alpha : float, default=0.8
+        Exponential decay factor for weighting CV folds. 
+        More recent folds are given higher weight.
+
+    Returns
+    -------
+    val_df : pandas.DataFrame
+        A DataFrame containing the weighted mean and standard deviation 
+        of each metric for every model. Columns are named as:
+            - `val_<metric>_mean`
+            - `val_<metric>_std`
+        Rows correspond to model names.
+
+    fold_scores_dict : dict
+        Dictionary containing the raw fold scores for each metric and model.
+        Structure:
+        {
+            "ModelName1": {
+                "val_<metric>_fold_scores": array([...]),
+                ...
+            },
+            ...
+        }
+
+    Notes
+    -----
+    - The function uses exponential weighting of folds so that more 
+      recent folds contribute more strongly to the mean and standard deviation.
+    - Useful for time series problems where performance on later periods
+      is more relevant than earlier periods.
+    """
+
+    means_dict={}
+    stds_dict={}
+    fold_scores_dict={}
+
+    n_splits = len(list(tscv.split(X_train)))
+    weights = np.array([alpha**(n_splits - i) for i in range(n_splits)])
+    weights = weights/ weights.sum()
+
+    for name, model in models_dict.items():
+        means = {}
+        stds = {}
+        fold_scores={}
         
-        model.fit(X_t, y_t)
-        y_pred = model.predict_proba(X_v)[:, 1]
-        if scoring == 'average precision':
-            ap = average_precision_score(y_v, y_pred)
-        scores.append(ap)
-    
-    if alpha is None:
-        return np.mean(scores)
-    
-    weights = np.array([alpha**(len(scores) - i) for i in range(len(scores))])
-    weighted_scores = np.array(scores) * weights
+        scores = cross_validate(model, X_train, y_train, cv=tscv, scoring=scoring, n_jobs=-1, verbose=0)
+        
+        for metric in scoring:
+            fold_vals = np.array(scores['test_' + metric])
+            fold_scores[f"val_{metric}_fold_scores"] = fold_vals
 
-    return np.sum(weighted_scores) / np.sum(weights), scores
+            weighted_score = fold_vals @ weights
+            weighted_mean = weighted_score
+
+            means[f"val_{metric}_mean"] = weighted_mean
+            
+            res = fold_vals - weighted_mean
+            weighted_var = (weights * res**2).sum()
+            weighted_std = np.sqrt(weighted_var)
+
+            stds[f"val_{metric}_std"] = weighted_std
+        
+        means_dict[name] = means
+        stds_dict[name] = stds
+        fold_scores_dict[name] = fold_scores
+
+    val_df = pd.concat([pd.DataFrame(means_dict).T, pd.DataFrame(stds_dict).T], axis=1)
+    return val_df, fold_scores_dict
+
+
 
 def build_rf(trial=None, params=None, **kwargs):
     if params is not None:
@@ -101,15 +186,58 @@ MODEL_BUILDERS = {
     'lgbm': build_lgbm
 }
 
-def objective(trial, model_type, X_train, y_train, alpha=0.8, scoring='average precision', scale_pos_weight=None):
+def objective(trial, model_type, X_train, y_train, alpha=0.8, scoring='average_precision', scale_pos_weight=None, n_splits=5):
+    """
+    Objective function for hyperparameter optimization (e.g., Optuna),
+    using time series cross-validation with exponential weighting.
+
+    Parameters
+    ----------
+    trial : optuna.trial.Trial
+        Current Optuna trial object.
+    
+    model_type : str
+        Key to select which model builder to use from MODEL_BUILDERS.
+    
+    X_train : array-like or DataFrame
+        Feature matrix.
+    
+    y_train : array-like
+        Target vector.
+    
+    alpha : float, default=0.8
+        Exponential decay factor for weighting CV folds.
+    
+    scoring : str, default='average_precision'
+        Metric name to optimize (must match one of the metrics in SCORING).
+    
+    scale_pos_weight : float or None, optional
+        Optional parameter passed to the model builder (useful for imbalanced data).
+    
+    n_splits : int, default=5
+        number of splits made for cv.
+
+    Returns
+    -------
+    float
+        Weighted mean score of the selected metric across CV folds.
+    """
     model = MODEL_BUILDERS[model_type](trial, scale_pos_weight=scale_pos_weight)
-    tscv = TimeSeriesSplit(n_splits=5)
-    score, folds = cross_val(model, tscv, X_train, y_train, alpha, scoring)
-    trial.set_user_attr('folds', folds)
-    return score
+    tscv = TimeSeriesSplit(n_splits=n_splits)
+    val_df, fold_scores = timeseries_multiple_cv_scoring(
+        X_train, y_train, {'model': model}, tscv, alpha=alpha
+    )
+    trial.set_user_attr('fold_scores', fold_scores)
+    trial.set_user_attr('fold_metrics', val_df)
+    
+    score_col = f'val_{scoring}_mean'
+    if score_col not in val_df.columns:
+        raise ValueError(f"Scoring metric '{scoring}' not found in CV results. Available: {val_df.columns.tolist()}")
+
+    return val_df.loc['model', score_col]
 
 
-def train_top_models(X_train, y_train, study, model_type, top_n=5, save_dir="models/"):
+def train_top_models(X_train, y_train, study, model_type, top_n=5, scale_pos_weight=None, save_dir="models/"):
     save_dir = Path(save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
     
@@ -118,7 +246,7 @@ def train_top_models(X_train, y_train, study, model_type, top_n=5, save_dir="mod
     trained_models = []
     for rank, trial in enumerate(top_trials, 1):
         save_path = save_dir / f"{model_type}_trial_{rank}.joblib"
-        model = MODEL_BUILDERS[model_type](params=trial.params)
+        model = MODEL_BUILDERS[model_type](params=trial.params, scale_pos_weight=scale_pos_weight)
 
         # attach user_attrs to model
         if hasattr(trial, "user_attrs"):

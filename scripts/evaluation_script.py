@@ -63,9 +63,11 @@ def main():
         train_sets[ticker] = (X_test, y_test)
     
 
-    models, proba_series, feat_imp_df, metrics, params_df, folds_df = load_and_eval_models(model_names, train_sets, project_root)
+    eval_dict = load_and_eval_models(model_names, train_sets, project_root)
+    proba_series = eval_dict['proba_series']
+    models = eval_dict['models']
 
-    plot_abs_importances(feat_imp_df, True, project_root / "results/figures", show=False)
+    plot_abs_importances(eval_dict['feat_imp_df'], True, project_root / "results/figures", show=False)
 
     for market, (X_test, y_test) in train_sets.items():
         plot_curves_in_one(y_test, proba_series[market].to_dict(), identifier=market, 
@@ -75,7 +77,8 @@ def main():
         plot_permutation_importance_v2(train_sets, {model: models[model]}, scoring='average_precision',
                                    save_png=True, file_path=project_root / "results/figures", identifier=model, show=False)
 
-    make_pdf_report(metrics, params_df, folds_df, train_sets.keys(), project_root / "results", filename=pdf_report_name)
+    make_pdf_report(eval_dict["metrics_df"], eval_dict['params_df'], eval_dict['fold_scores_df'], 
+                    train_sets.keys(), project_root / "results", filename=pdf_report_name)
 
 
 

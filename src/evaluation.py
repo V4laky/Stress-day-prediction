@@ -145,60 +145,26 @@ def load_top_models(jsonl_path, models_dir):
     
     return models_dict, metrics_dict
 
+def get_feat_imp(models, X_test):
 
-def load_and_eval_models(model_names, train_sets_dict, project_root):
-    """
-    train_sets_dict : ticker:(X_test, y_test)
+    feat_imp_dict = {}
+    for name, model in models.items():
+        feat_imp_dict[name] = {k:v for (k,v) in zip(X_test.columns.tolist(), model.feature_importances_)}
+    return pd.DataFrame(feat_imp_dict)
 
-    returns models, proba_series, feat_imp_df, metrics_df, params_df, folds_df
-    """
-
-    models = {}
-    folds_dict = {}
-    params_dict = {}
-
-    # load models
-    model_dir = Path(project_root / "results/models")
-    for name in model_names:
-        model = load(model_dir / f'{name}.joblib')
-        models[name] = model
-    
-    # make predictions dicts/series
+def get_predictions(models, train_sets_dict):
     proba_dict = {}
     pred_dict = {}
     best_thresholds = {}
-
+    
     for name, model in models.items():
         for market, (X_test, y_test) in train_sets_dict.items():
             proba_dict[(market, name)] = model.predict_proba(X_test)[:, 1]
             best_thresholds[(market, name)] = best_threshold(y_test, proba_dict[(market, name)])
-            pred_dict[(market, name)] = proba_dict[(market, name)] > best_thresholds[(market, name)]
-    proba_series = pd.Series(proba_dict)
+            pred_dict[(market, name)] = proba_dict[(market, name)] >= best_thresholds[(market, name)]
+    return proba_dict, pred_dict, best_thresholds
 
-    # make metrics dataframe    
-    metrics_df = pd.DataFrame()
-    for (market, name) in proba_dict:
-        y_test = train_sets_dict[market][1]
-        metrics_df = give_metrics(y_test, pred_dict[(market,name)], proba_dict[(market, name)], df=metrics_df, model_name=f"{market} - {name}")
-
-    # append best threshold to metrics
-    metrics_df.index = pd.MultiIndex.from_tuples([tuple(i.split(' - ')) for i in metrics_df.index], names=["Market", "Model"])
-    metrics_df['best_thresholds'] = pd.Series(best_thresholds)
-
-    # make feature importance dataframe
-    feat_imp_dict = {}
-    for name, model in models.items():
-        feat_imp_dict[name] = {k:v for (k,v) in zip(X_test.columns.tolist(), model.feature_importances_)}
-    feat_imp_df = pd.DataFrame(feat_imp_dict)
-
-    # make params and folds dataframe
-    for name, model in models.items():
-        params_dict[name] = model.get_params()
-        folds_dict[name] = model.user_attrs["folds"]
-
-    params_df = pd.DataFrame(params_dict)
-    folds_df = pd.DataFrame(folds_dict)
-
+def clean_params(params_df):
     params_df.dropna(inplace=True)
     params_df = params_df.T
     # Identify columns that are fully numeric
@@ -211,6 +177,81 @@ def load_and_eval_models(model_names, train_sets_dict, project_root):
             numeric_cols.append(col)
             # Replace the column with converted floats
             params_df[col] = numeric
-    params_df = params_df.round(4).T
+    return params_df.round(4).T
+
+def load_and_eval_models(model_names, train_sets_dict, project_root):
+    """
+    Evaluate multiple trained models on multiple test sets.
+
+    Parameters
+    ----------
+    model_names : list of str
+        Names of saved model files (without extension).
+    train_sets_dict : dict
+        Mapping from market -> (X_test, y_test).
+    project_root : Path
+        Root path of the project.
+
+    Returns
+    -------
+    dict
+        {
+            'models': dict of model_name -> model,
+            'proba_series': Series of predicted probabilities,
+            'feat_imp_df': DataFrame of feature importances,
+            'metrics_df': DataFrame of evaluation metrics,
+            'params_df': DataFrame of cleaned hyperparameters,
+            'fold_scores_df': DataFrame of fold scores,
+            'fold_metrics_dict': dict of fold metrics,
+        }
+    """
+
+    models = {}
+    folds_dict = {}
+    params_dict = {}
+    fold_metrics_df=pd.DataFrame()
+
+    # load models
+    model_dir = Path(project_root / "results/models")
+    for name in model_names:
+        model = load(model_dir / f'{name}.joblib')
+        models[name] = model
     
-    return models, proba_series, feat_imp_df, metrics_df, params_df, folds_df
+    proba_dict, pred_dict, best_thresholds = get_predictions(models, train_sets_dict)
+    proba_series = pd.Series(proba_dict)
+
+    # make metrics dataframe    
+    metrics_df = pd.DataFrame()
+    for (market, name) in proba_dict:
+        y_test = train_sets_dict[market][1]
+        X_test = train_sets_dict[market][0] # for get_feat_imp()
+        metrics_df = give_metrics(y_test, pred_dict[(market,name)], proba_dict[(market, name)], df=metrics_df, model_name=f"{market} - {name}")
+
+    # append best threshold to metrics
+    metrics_df.index = pd.MultiIndex.from_tuples([tuple(i.split(' - ')) for i in metrics_df.index], names=["Market", "Model"])
+    metrics_df['best_thresholds'] = pd.Series(best_thresholds)
+
+    feat_imp_df = get_feat_imp(models, X_test)
+
+    # make params and folds dataframe
+    for name, model in models.items():
+        params_dict[name] = model.get_params()
+        folds_dict[name] = model.user_attrs["fold_scores"]
+        fold_metrics_df[name] = model.user_attrs['fold_metrics'].iloc[0]
+
+    params_df = pd.DataFrame(params_dict)
+    fold_scores_df = pd.DataFrame(folds_dict)
+
+    params_df = clean_params(params_df)
+    
+    eval_dict={
+        "models":models,
+        'proba_series':proba_series,
+        'feat_imp_df':feat_imp_df,
+        'fold_metrics_dict':fold_metrics_df,
+        'metrics_df':metrics_df,
+        'params_df':params_df,
+        'fold_scores_df':fold_scores_df
+    }
+
+    return eval_dict

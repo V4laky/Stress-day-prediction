@@ -12,7 +12,7 @@ def best_threshold(y_true, y_proba):
         if score > best_score:
             best_score = score
             best_tresh = i
-    print(best_tresh)
+
     return best_tresh
 
 def train_test_by_time(df, split_date='2018-12-31'):
