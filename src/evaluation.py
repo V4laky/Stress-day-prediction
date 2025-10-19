@@ -201,13 +201,13 @@ def load_and_eval_models(model_names, train_sets_dict, project_root):
             'feat_imp_df': DataFrame of feature importances,
             'metrics_df': DataFrame of evaluation metrics,
             'params_df': DataFrame of cleaned hyperparameters,
-            'fold_scores_df': DataFrame of fold scores,
+            'fold_scores_dict': dict of fold scores,
             'fold_metrics_dict': dict of fold metrics,
         }
     """
 
     models = {}
-    folds_dict = {}
+    fold_scores_dict = {}
     params_dict = {}
     fold_metrics_df=pd.DataFrame()
 
@@ -236,11 +236,10 @@ def load_and_eval_models(model_names, train_sets_dict, project_root):
     # make params and folds dataframe
     for name, model in models.items():
         params_dict[name] = model.get_params()
-        folds_dict[name] = model.user_attrs["fold_scores"]
+        fold_scores_dict[name] = model.user_attrs["fold_scores"]
         fold_metrics_df[name] = model.user_attrs['fold_metrics'].iloc[0]
 
     params_df = pd.DataFrame(params_dict)
-    fold_scores_df = pd.DataFrame(folds_dict)
 
     params_df = clean_params(params_df)
     
@@ -251,7 +250,7 @@ def load_and_eval_models(model_names, train_sets_dict, project_root):
         'fold_metrics_dict':fold_metrics_df,
         'metrics_df':metrics_df,
         'params_df':params_df,
-        'fold_scores_df':fold_scores_df
+        'fold_scores_dict':fold_scores_dict
     }
 
     return eval_dict

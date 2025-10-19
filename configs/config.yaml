@@ -5,23 +5,6 @@ data:
   split_date: "2019-01-01"
 
 features:
- - 'Vol20/VIX'
- - 'Vol5/VIX'
- - 'Scaled_Lag_1d'
- - 'Scaled_Lag_3d'
- - 'Sharpe-like_10'
- - 'Sharpe-like_5'
- - 'log_returns_zscore'
- - 'VIX_zscore'
- - 'Momentum5_20'
- - 'Momentum10_20'
- - 'Momentum5_10'
- - 'Momentum3_20'
- - 'Momentum3_10'
- - 'Momentum3_5'
- - 'Scaled_weighted_avg'
-
-features:
  - 'VOL5/VIX'
  - 'VOL20/VIX'
  - 'lag_return_1/vol20'

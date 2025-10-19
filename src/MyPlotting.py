@@ -239,6 +239,7 @@ def plot_abs_importances(imp_df, save_png=False, file_path=None, identifier="", 
         if file_path is None:
             plt.savefig(f'abs_imp_{identifier}.png', dpi=300)
         else:
+            file_path.mkdir(parents=True, exist_ok=True)
             plt.savefig(file_path / f'abs_imp_{identifier}', dpi=300)    
             print(f"Saved {file_path}/abs_imp_{identifier}")
     

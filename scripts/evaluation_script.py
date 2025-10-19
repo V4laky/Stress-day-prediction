@@ -39,6 +39,8 @@ def main():
     model_type = config["training"]["model"]
     n_optuna_trials = config["training"]["n_optuna_trials"]
     top_n_models = config["training"]["top_n_models"]
+    # this might become a settable parameter
+    metric_to_optimize = "average_precision"
 
     model_names = config["evaluation"]["model_names"]
     eval_tickers = config['evaluation']["eval_tickers"]
@@ -67,6 +69,15 @@ def main():
     proba_series = eval_dict['proba_series']
     models = eval_dict['models']
 
+    fold_scores_dict = eval_dict["fold_scores_dict"]
+    objective_metric_dict = {}
+    for name in models:
+        objective_metric_dict[name] = fold_scores_dict[name]['model'][f'val_{metric_to_optimize}_fold_scores']
+    
+    import pandas as pd
+    objective_metric_df = pd.DataFrame(objective_metric_dict)
+    
+
     plot_abs_importances(eval_dict['feat_imp_df'], True, project_root / "results/figures", show=False)
 
     for market, (X_test, y_test) in train_sets.items():
@@ -77,7 +88,7 @@ def main():
         plot_permutation_importance_v2(train_sets, {model: models[model]}, scoring='average_precision',
                                    save_png=True, file_path=project_root / "results/figures", identifier=model, show=False)
 
-    make_pdf_report(eval_dict["metrics_df"], eval_dict['params_df'], eval_dict['fold_scores_df'], 
+    make_pdf_report(eval_dict["metrics_df"], eval_dict['params_df'], objective_metric_df, 
                     train_sets.keys(), project_root / "results", filename=pdf_report_name)
 
 
