@@ -1,122 +1,15 @@
 import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
-from sklearn.model_selection import TimeSeriesSplit, cross_validate
+from sklearn.model_selection import TimeSeriesSplit
 from pathlib import Path
 from joblib import dump
+
+from src.cv_utils import timeseries_multiple_cv_scoring
 
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
-
-
-
-SCORING = {
-    'accuracy': 'accuracy',
-    'precision': 'precision',
-    'recall': 'recall',
-    'f1': 'f1',
-    'roc_auc': 'roc_auc',
-    'average_precision': 'average_precision'
-}
-
-def timeseries_multiple_cv_scoring(X_train, y_train, models_dict, tscv, scoring = SCORING, alpha=.8):
-    """
-    Perform time series cross-validation for multiple models and compute 
-    weighted mean and standard deviation of multiple metrics.
-
-    Parameters
-    ----------
-    X_train : array-like or DataFrame
-        Feature matrix used for training.
-    
-    y_train : array-like
-        Target vector corresponding to X_train.
-    
-    models_dict : dict
-        Dictionary of models to evaluate, with structure:
-        {
-            "ModelName1": estimator1,
-            "ModelName2": estimator2,
-            ...
-        }
-    
-    tscv : cross-validation generator
-        A time series cross-validator (e.g. TimeSeriesSplit).
-    
-    scoring : list or dict of str, default=SCORING
-        Scoring metrics to evaluate. Should match valid metrics for 
-        `sklearn.model_selection.cross_validate`.
-    
-    alpha : float, default=0.8
-        Exponential decay factor for weighting CV folds. 
-        More recent folds are given higher weight.
-
-    Returns
-    -------
-    val_df : pandas.DataFrame
-        A DataFrame containing the weighted mean and standard deviation 
-        of each metric for every model. Columns are named as:
-            - `val_<metric>_mean`
-            - `val_<metric>_std`
-        Rows correspond to model names.
-
-    fold_scores_dict : dict
-        Dictionary containing the raw fold scores for each metric and model.
-        Structure:
-        {
-            "ModelName1": {
-                "val_<metric>_fold_scores": array([...]),
-                ...
-            },
-            ...
-        }
-
-    Notes
-    -----
-    - The function uses exponential weighting of folds so that more 
-      recent folds contribute more strongly to the mean and standard deviation.
-    - Useful for time series problems where performance on later periods
-      is more relevant than earlier periods.
-    """
-
-    means_dict={}
-    stds_dict={}
-    fold_scores_dict={}
-
-    n_splits = len(list(tscv.split(X_train)))
-    weights = np.array([alpha**(n_splits - i) for i in range(n_splits)])
-    weights = weights/ weights.sum()
-
-    for name, model in models_dict.items():
-        means = {}
-        stds = {}
-        fold_scores={}
-        
-        scores = cross_validate(model, X_train, y_train, cv=tscv, scoring=scoring, n_jobs=-1, verbose=0)
-        
-        for metric in scoring:
-            fold_vals = np.array(scores['test_' + metric])
-            fold_scores[f"val_{metric}_fold_scores"] = fold_vals
-
-            weighted_score = fold_vals @ weights
-            weighted_mean = weighted_score
-
-            means[f"val_{metric}_mean"] = weighted_mean
-            
-            res = fold_vals - weighted_mean
-            weighted_var = (weights * res**2).sum()
-            weighted_std = np.sqrt(weighted_var)
-
-            stds[f"val_{metric}_std"] = weighted_std
-        
-        means_dict[name] = means
-        stds_dict[name] = stds
-        fold_scores_dict[name] = fold_scores
-
-    val_df = pd.concat([pd.DataFrame(means_dict).T, pd.DataFrame(stds_dict).T], axis=1)
-    return val_df, fold_scores_dict
-
 
 
 def build_rf(trial=None, params=None, **kwargs):
@@ -126,11 +19,11 @@ def build_rf(trial=None, params=None, **kwargs):
         return RandomForestClassifier(**params)
     elif trial is not None:
         return RandomForestClassifier(
-            n_estimators=trial.suggest_int('n_estimators', 200, 1500),
-            max_depth=trial.suggest_int('max_depth', 3, 20),
-            min_samples_split=trial.suggest_int('min_samples_split', 2, 32),
-            min_samples_leaf=trial.suggest_int('min_samples_leaf', 1, 16),
-            max_features=trial.suggest_categorical('max_features', ['sqrt', 'log2', None]),
+            n_estimators=trial.suggest_int('n_estimators', 100, 600),
+            max_depth=trial.suggest_int('max_depth', 3, 12),
+            min_samples_split=trial.suggest_int('min_samples_split', 2, 16),
+            min_samples_leaf=trial.suggest_int('min_samples_leaf', 1, 8),
+            max_features=trial.suggest_categorical('max_features', ['sqrt', 'log2']),
             class_weight='balanced',
             random_state=42,
             n_jobs=-1
@@ -186,7 +79,8 @@ MODEL_BUILDERS = {
     'lgbm': build_lgbm
 }
 
-def objective(trial, model_type, X_train, y_train, alpha=0.8, scoring='average_precision', scale_pos_weight=None, n_splits=5):
+def objective(trial, model_type, X_train, y_train, early_stopping=None,
+              alpha=0.8, scoring='average_precision', scale_pos_weight=None, n_splits=5):
     """
     Objective function for hyperparameter optimization (e.g., Optuna),
     using time series cross-validation with exponential weighting.
@@ -205,6 +99,9 @@ def objective(trial, model_type, X_train, y_train, alpha=0.8, scoring='average_p
     y_train : array-like
         Target vector.
     
+    early_stopping : int, default None
+        Used for boosing models. None if its not applied (and it wont be logged in user_attrs)
+
     alpha : float, default=0.8
         Exponential decay factor for weighting CV folds.
     
@@ -225,10 +122,13 @@ def objective(trial, model_type, X_train, y_train, alpha=0.8, scoring='average_p
     model = MODEL_BUILDERS[model_type](trial, scale_pos_weight=scale_pos_weight)
     tscv = TimeSeriesSplit(n_splits=n_splits)
     val_df, fold_scores = timeseries_multiple_cv_scoring(
-        X_train, y_train, {'model': model}, tscv, alpha=alpha
+        X_train, y_train, {'model': model}, tscv, alpha=alpha, early_stopping=early_stopping
     )
     trial.set_user_attr('fold_scores', fold_scores)
-    trial.set_user_attr('fold_metrics', val_df)
+    trial.set_user_attr('fold_metrics', val_df.to_dict()) # dict() so it can be read later
+
+    if early_stopping is not None:
+        trial.set_user_attr('early_stopping', early_stopping)
     
     score_col = f'val_{scoring}_mean'
     if score_col not in val_df.columns:
@@ -237,9 +137,17 @@ def objective(trial, model_type, X_train, y_train, alpha=0.8, scoring='average_p
     return val_df.loc['model', score_col]
 
 
-def train_top_models(X_train, y_train, study, model_type, top_n=5, scale_pos_weight=None, save_dir="models/"):
+def train_top_models(X_train, y_train, X_val, y_val, study, model_type, top_n=5, 
+                     early_stopping = None, scale_pos_weight=None, 
+                     eval_metric='average_precision', save_dir="models/"):
+    
+    print(f"Entering train_top_models, save_dir={save_dir}")
+    print(f"Number of best trials: {len(study.trials)}")
+    
     save_dir = Path(save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
+
+    print('Models directory should exsit now.')
     
     top_trials = sorted(study.trials, key=lambda t: t.value, reverse=True)[:top_n]
     
@@ -251,8 +159,20 @@ def train_top_models(X_train, y_train, study, model_type, top_n=5, scale_pos_wei
         # attach user_attrs to model
         if hasattr(trial, "user_attrs"):
             model.user_attrs = trial.user_attrs
-
-        model.fit(X_train, y_train)
+        if early_stopping is not None:
+            try:
+                model.fit(
+                    X_train, y_train,
+                    eval_set=([X_val, y_val]), 
+                    eval_metric=eval_metric, 
+                    early_stopping=early_stopping, 
+                    verbose=False
+                )
+            except TypeError as e:
+                print(f"Couldn't use early stopping for {type(model).__name__}: {e}")
+                model.fit(X_train, y_train)
+        else:
+            model.fit(X_train, y_train)
 
         trained_models.append(model)
         dump(model, save_path)

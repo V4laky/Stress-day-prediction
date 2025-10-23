@@ -30,11 +30,16 @@ def log_experiment(model_name, params, metrics, cv_scheme, features, extra_notes
     with open(project_root / f"results/{file_name}", "a") as f:
         f.write(json.dumps(log) + "\n")
 
-def log_trials_to_csv(df, file_path=None, append = False):
-    if not append:
-        df.to_csv(file_path, index=False)
-    else:
-        df.to_csv(file_path, mode='a', header=False, index=False)
+
+def log_trials_to_json(df, file_path=None):
+    import json
+    from src.utils import make_json_safe
+
+    # Convert any arrays in user_attrs to lists
+    safe_dict = make_json_safe(df.to_dict())
+    
+    with open(file_path, 'w') as f:
+        json.dump(safe_dict, f)
     print(f'Saved trials dataframe at {file_path}')
 
 
@@ -209,7 +214,7 @@ def load_and_eval_models(model_names, train_sets_dict, project_root):
     models = {}
     fold_scores_dict = {}
     params_dict = {}
-    fold_metrics_df=pd.DataFrame()
+    fold_metrics_dict=pd.DataFrame()
 
     # load models
     model_dir = Path(project_root / "results/models")
@@ -229,7 +234,7 @@ def load_and_eval_models(model_names, train_sets_dict, project_root):
 
     # append best threshold to metrics
     metrics_df.index = pd.MultiIndex.from_tuples([tuple(i.split(' - ')) for i in metrics_df.index], names=["Market", "Model"])
-    metrics_df['best_thresholds'] = pd.Series(best_thresholds)
+    metrics_df['best_thresholds'] = pd.Series(best_thresholds, dtype=float)
 
     feat_imp_df = get_feat_imp(models, X_test)
 
@@ -237,7 +242,10 @@ def load_and_eval_models(model_names, train_sets_dict, project_root):
     for name, model in models.items():
         params_dict[name] = model.get_params()
         fold_scores_dict[name] = model.user_attrs["fold_scores"]
-        fold_metrics_df[name] = model.user_attrs['fold_metrics'].iloc[0]
+        fold_metrics_dict[name] = model.user_attrs['fold_metrics']
+
+        if 'early_stopping' in model.user_attrs.keys():
+            params_dict[name]['early_stopping'] = model.user_attrs['early_stopping']
 
     params_df = pd.DataFrame(params_dict)
 
@@ -247,7 +255,7 @@ def load_and_eval_models(model_names, train_sets_dict, project_root):
         "models":models,
         'proba_series':proba_series,
         'feat_imp_df':feat_imp_df,
-        'fold_metrics_dict':fold_metrics_df,
+        'fold_metrics_dict':fold_metrics_dict,
         'metrics_df':metrics_df,
         'params_df':params_df,
         'fold_scores_dict':fold_scores_dict

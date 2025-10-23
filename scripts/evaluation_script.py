@@ -83,9 +83,11 @@ def main():
     for market, (X_test, y_test) in train_sets.items():
         plot_curves_in_one(y_test, proba_series[market].to_dict(), identifier=market, 
                            save_png=True, file_path=project_root / "results/figures", show=False)
-
-    for model in models:
-        plot_permutation_importance_v2(train_sets, {model: models[model]}, scoring='average_precision',
+    
+    has_perm_imp = False # debug
+    if not has_perm_imp:
+        for model in models:
+            plot_permutation_importance_v2(train_sets, {model: models[model]}, scoring='average_precision',
                                    save_png=True, file_path=project_root / "results/figures", identifier=model, show=False)
 
     make_pdf_report(eval_dict["metrics_df"], eval_dict['params_df'], objective_metric_df, 

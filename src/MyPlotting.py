@@ -271,3 +271,33 @@ def auto_plot_features(Feature_df):
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])  # adjust for suptitle
     plt.show()
+
+
+def line_plot_metric(df, metric, ax=None):
+    
+    mean_values = df.mean(axis=1)
+    std_values = df.std(axis=1)
+
+    if ax is None:
+        sns.lineplot(data=mean_values, label='Mean')
+        plt.fill_between(mean_values.index, 
+                        mean_values - std_values, 
+                        mean_values + std_values, 
+                        color='blue', alpha=0.3, label='Mean ± STD')
+
+        plt.title(f'Mean ± Std of {metric} across Folds')
+        plt.xlabel('Index')
+        plt.ylabel(f'{metric}')
+
+        plt.show()
+    
+    else:
+        sns.lineplot(data=mean_values, label='Mean', ax=ax)
+        ax.fill_between(mean_values.index, 
+                        mean_values - std_values, 
+                        mean_values + std_values, 
+                        color='blue', alpha=0.3, label='Mean ± STD')
+
+        ax.set_title(f'Mean ± Std of {metric} across Folds')
+        ax.set_xlabel('Index')
+        ax.set_ylabel(f'{metric}')

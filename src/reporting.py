@@ -85,13 +85,63 @@ def make_pdf_report(metrics_df, model_params_df, folds_df, indexes, results_path
         
         story.append(Spacer(1, 12))
 
-        img = Image(results_path / f'figures/perm_imp_{model}.png', width=450, height=400)
+        img = Image(results_path / f'figures/perm_imp_{model}.png', width=450, height=500)
         story.append(img)
         story.append(PageBreak())
 
     # ---- Feature Importances ----
     img = Image(results_path / 'figures/abs_imp_.png', width=450, height=600)
     story.append(img)
+
+    doc.build(story)
+    print(f'Saved pdf report to: {results_path}/{filename}')
+
+def make_features_pdf(fold_metrics_agg, fold_metrics_df, results_path, filename):
+    
+    from reportlab.platypus import TableStyle
+    from reportlab.lib import colors
+
+    doc = SimpleDocTemplate(f'{results_path}/{filename}', pagesize=A4)
+    story = []
+    styles = getSampleStyleSheet()
+
+    tab_style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),      # Header background
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke), # Header text color
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),             # Center everything
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),   # Bold header
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),             # Header padding
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),    # Body background
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),     # Border grid
+        ])
+    
+
+    story.append(Paragraph(f'<b>Mean, and std of weighted means and stds by fold number</b>', styles['Normal']))
+    story.append(Spacer(1, 6))
+
+    table = df_to_table(fold_metrics_agg.round(4), 'metric')
+    table.setStyle(tab_style)
+    story.append(table)
+    
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph(f'<b>Metrics of Top 3 by AP score (weighted mean)</b>', styles['Normal']))
+    story.append(Spacer(1, 6))
+
+    table = df_to_table(fold_metrics_df.iloc[:, :3].round(4), 'metric')
+    table.setStyle(tab_style)
+    story.append(table)
+
+    story.append(PageBreak())
+
+
+    img = Image(results_path / 'figures/feat_lines.png', width=450, height=600)
+    story.append(img)
+    story.append(PageBreak())
+
+    img = Image(results_path / 'figures/heatmap.png', width=450, height=600)
+    story.append(img)
+    story.append(PageBreak())
 
     doc.build(story)
     print(f'Saved pdf report to: {results_path}/{filename}')

@@ -8,7 +8,7 @@ sys.path.append(str(repo_root))
 
 from src.data_processing import load_data
 from src.models import objective, train_top_models
-from src.evaluation import log_trials_to_csv
+from src.evaluation import log_trials_to_json
 import optuna
 import yaml
 
@@ -39,7 +39,11 @@ def main():
     model_type = config["training"]["model"]
     n_optuna_trials = config["training"]["n_optuna_trials"]
     top_n_models = config["training"]["top_n_models"]
+    early_stopping = config["training"].get("early_stopping", None)
 
+    pdf_report_name = config['evaluation']['pdf_report_name'] # use it for json name
+    json_name = pdf_report_name[:-4] + '.json'
+    
 
     project_root = Path(__file__).resolve().parent.parent # assumes file is in a subdirectory of the project root
     print(f'Project root is: {project_root}')
@@ -59,7 +63,7 @@ def main():
     scale_pos_weight = neg / pos if pos > 0 else 1
 
     def objective_wrapper(trial):
-        return objective(trial, model_type=model_type, X_train=X_train, 
+        return objective(trial, model_type=model_type, X_train=X_train, early_stopping=early_stopping,
                          y_train=y_train, scale_pos_weight=scale_pos_weight)
 
     study = optuna.create_study(direction='maximize', sampler=optuna.samplers.RandomSampler(seed=42))
@@ -69,9 +73,11 @@ def main():
     
     results_dir = project_root / 'results'
     results_dir.mkdir(parents=True, exist_ok=True)
-    log_trials_to_csv(study_df, results_dir / f'{model_type}_trials.csv', append=False)
+    log_trials_to_json(study_df, results_dir / json_name)
 
-    train_top_models(X_train, y_train, study, model_type, top_n_models, scale_pos_weight, save_dir=results_dir/'models')
+    train_top_models(X_train, y_train, X_test, y_test, study, model_type, top_n_models, 
+                     scale_pos_weight=scale_pos_weight, early_stopping=early_stopping, 
+                     save_dir=results_dir/'models')
 
 if __name__ == "__main__":
     main()

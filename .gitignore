@@ -6,6 +6,7 @@ market_risk_venv/
 results/figures/*
 results/models/*
 results/*.csv
+results/*.json
 results/*.pdf
 results/*.jsonl
 

@@ -1,0 +1,353 @@
+core_price_features:
+  - log_returns
+  - Stress
+
+price_stats:
+  rolling_volatility:
+    - 5_day_rolling_volatility
+    - 10_day_rolling_volatility
+    - 20_day_rolling_volatility
+    - 40_day_rolling_volatility
+  SMA:
+    - SMA_5
+    - SMA_10
+    - SMA_20
+    - SMA_40
+  Momentum:  
+    - Momentumn5_10
+    - Momentumn5_20
+    - Momentumn5_40
+    - Momentumn10_20
+    - Momentumn10_40
+    - Momentumn20_40
+  rolling_return:
+    - 5_day_rolling_return
+    - 10_day_rolling_return
+    - 20_day_rolling_return
+    - 40_day_rolling_return
+    - EWLR_0.8_1-20/20
+  short_scaled_lags:
+    - lag_return_1/vol20
+    - lag_return_2/vol20
+    - lag_return_3/vol20
+    - lag_return_4/vol20
+    - lag_return_5/vol20
+  medium_scaled_lags:
+    - lag_return_6/vol20
+    - lag_return_7/vol20
+    - lag_return_8/vol20
+    - lag_return_9/vol20
+    - lag_return_10/vol20
+    - lag_return_11/vol20
+    - lag_return_12/vol20
+  long_scaled_lags:
+    - lag_return_13/vol20
+    - lag_return_14/vol20
+    - lag_return_15/vol20
+    - lag_return_16/vol20
+    - lag_return_17/vol20
+    - lag_return_18/vol20
+    - lag_return_19/vol20
+    - lag_return_20/vol20
+  Skew_and_Kurt:
+    - Skew_5
+    - Skew_10
+    - Skew_20
+    - Skew_40
+    - Kurt_5
+    - Kurt_10
+    - Kurt_20
+    - Kurt_40
+  vol_ratios:
+    - Vol_momentum_5_10
+    - Vol_momentum_5_20
+    - Vol_momentum_5_40
+    - Vol_momentum_10_20
+    - Vol_momentum_10_40
+    - Vol_momentum_20_40
+  
+  sharpe_like:
+    - Sharpe-like_5/10
+    - Sharpe-like_5/20
+    - Sharpe-like_5/40
+    - Sharpe-like_10/20
+    - Sharpe-like_10/40
+    - Sharpe-like_20/40
+    - Sharpe-like_5/VIX
+    - Sharpe-like_10/VIX
+    - Sharpe-like_20/VIX
+    - Sharpe-like_40/VIX
+  z_scores:
+    - log_returns_z_5
+    - log_returns_z_10
+    - log_returns_z_20
+    - log_returns_z_40
+  5-10_vol_of_vol:
+    - 5_day_rolling_vol_of_vol_5
+    - 5_day_rolling_vol_of_vol_10
+    - 5_day_rolling_vol_of_vol_20
+    - 5_day_rolling_vol_of_vol_40
+    - 10_day_rolling_vol_of_vol_5
+    - 10_day_rolling_vol_of_vol_10
+    - 10_day_rolling_vol_of_vol_20
+    - 10_day_rolling_vol_of_vol_40
+  20-40_vol_of_vol:
+    - 20_day_rolling_vol_of_vol_5
+    - 20_day_rolling_vol_of_vol_10
+    - 20_day_rolling_vol_of_vol_20
+    - 20_day_rolling_vol_of_vol_40
+    - 40_day_rolling_vol_of_vol_5
+    - 40_day_rolling_vol_of_vol_10
+    - 40_day_rolling_vol_of_vol_20
+    - 40_day_rolling_vol_of_vol_40
+
+VIX_features:
+  raw:
+    - VIX
+  rolling:
+    - 5_day_rolling_VIX
+    - 10_day_rolling_VIX
+    - 20_day_rolling_VIX
+    - 40_day_rolling_VIX
+  rolling_vol:
+    - 5_day_rolling_vol_of_VIX
+    - 10_day_rolling_vol_of_VIX
+    - 20_day_rolling_vol_of_VIX
+    - 40_day_rolling_vol_of_VIX
+  momentum:
+    - VIX_Momentumn5_10
+    - VIX_Momentumn5_20
+    - VIX_Momentumn5_40
+    - VIX_Momentumn10_20
+    - VIX_Momentumn10_40
+    - VIX_Momentumn20_40
+  short_lags:
+    - lag_VIX_1
+    - lag_VIX_2
+    - lag_VIX_3
+    - lag_VIX_4
+    - lag_VIX_5
+  medium_lags:
+    - lag_VIX_6
+    - lag_VIX_7
+    - lag_VIX_8
+    - lag_VIX_9
+    - lag_VIX_10
+    - lag_VIX_11
+    - lag_VIX_12
+  long_lags:
+    - lag_VIX_13
+    - lag_VIX_14
+    - lag_VIX_15
+    - lag_VIX_16
+    - lag_VIX_17
+    - lag_VIX_18
+    - lag_VIX_19
+    - lag_VIX_20
+  skew_and_kurt:
+    - VIX_Skew_5
+    - VIX_Skew_10
+    - VIX_Skew_20
+    - VIX_Skew_40
+  z_scores:
+    - VIX_z_5
+    - VIX_z_10
+    - VIX_z_20
+    - VIX_z_40
+
+VIX_over_vol_features:
+  raw:
+    - VIX/vol5
+    - VIX/vol10
+    - VIX/vol20
+    - VIX/vol40
+  rolling_with_5-10_vol:
+    - 5_day_rolling_VIX/vol5
+    - 10_day_rolling_VIX/vol5
+    - 20_day_rolling_VIX/vol5
+    - 40_day_rolling_VIX/vol5
+    - 5_day_rolling_VIX/vol10
+    - 10_day_rolling_VIX/vol10
+    - 20_day_rolling_VIX/vol10
+    - 40_day_rolling_VIX/vol10
+  rolling_with_20-40_vol:
+    - 5_day_rolling_VIX/vol20
+    - 10_day_rolling_VIX/vol20
+    - 20_day_rolling_VIX/vol20
+    - 40_day_rolling_VIX/vol20
+    - 5_day_rolling_VIX/vol40
+    - 10_day_rolling_VIX/vol40
+    - 20_day_rolling_VIX/vol40
+    - 40_day_rolling_VIX/vol40
+  rolling_vol_with_5-10_vol:  
+    - 5_day_rolling_vol_of_VIX/vol5
+    - 10_day_rolling_vol_of_VIX/vol5
+    - 20_day_rolling_vol_of_VIX/vol5
+    - 40_day_rolling_vol_of_VIX/vol5
+    - 5_day_rolling_vol_of_VIX/vol10
+    - 10_day_rolling_vol_of_VIX/vol10
+    - 20_day_rolling_vol_of_VIX/vol10
+    - 40_day_rolling_vol_of_VIX/vol10
+  rolling_vol_with_20-40_vol:  
+    - 5_day_rolling_vol_of_VIX/vol20
+    - 10_day_rolling_vol_of_VIX/vol20
+    - 20_day_rolling_vol_of_VIX/vol20
+    - 40_day_rolling_vol_of_VIX/vol20
+    - 5_day_rolling_vol_of_VIX/vol40
+    - 10_day_rolling_vol_of_VIX/vol40
+    - 20_day_rolling_vol_of_VIX/vol40
+    - 40_day_rolling_vol_of_VIX/vol40
+  momentum_with_5-10_vol:
+    - VIX/vol5_Momentumn5_10
+    - VIX/vol5_Momentumn5_20
+    - VIX/vol5_Momentumn5_40
+    - VIX/vol5_Momentumn10_20
+    - VIX/vol5_Momentumn10_40
+    - VIX/vol5_Momentumn20_40
+    - VIX/vol10_Momentumn5_10
+    - VIX/vol10_Momentumn5_20
+    - VIX/vol10_Momentumn5_40
+    - VIX/vol10_Momentumn10_20
+    - VIX/vol10_Momentumn10_40
+    - VIX/vol10_Momentumn20_40
+  momentum_with_20-40_vol:
+    - VIX/vol20_Momentumn5_10
+    - VIX/vol20_Momentumn5_20
+    - VIX/vol20_Momentumn5_40
+    - VIX/vol20_Momentumn10_20
+    - VIX/vol20_Momentumn10_40
+    - VIX/vol20_Momentumn20_40
+    - VIX/vol40_Momentumn5_10
+    - VIX/vol40_Momentumn5_20
+    - VIX/vol40_Momentumn5_40
+    - VIX/vol40_Momentumn10_20
+    - VIX/vol40_Momentumn10_40
+    - VIX/vol40_Momentumn20_40
+  short_lag_over_5_vol:
+    - lag_VIX/vol5_1
+    - lag_VIX/vol5_2
+    - lag_VIX/vol5_3
+    - lag_VIX/vol5_4
+    - lag_VIX/vol5_5
+  medium_lag_over_5_vol:
+    - lag_VIX/vol5_6
+    - lag_VIX/vol5_7
+    - lag_VIX/vol5_8
+    - lag_VIX/vol5_9
+    - lag_VIX/vol5_10
+    - lag_VIX/vol5_11
+    - lag_VIX/vol5_12
+  long_lag_over_5_vol:
+    - lag_VIX/vol5_13
+    - lag_VIX/vol5_14
+    - lag_VIX/vol5_15
+    - lag_VIX/vol5_16
+    - lag_VIX/vol5_17
+    - lag_VIX/vol5_18
+    - lag_VIX/vol5_19
+    - lag_VIX/vol5_20
+  short_lag_over_10_vol:
+    - lag_VIX/vol10_1
+    - lag_VIX/vol10_2
+    - lag_VIX/vol10_3
+    - lag_VIX/vol10_4
+    - lag_VIX/vol10_5
+  medium_lag_over_10_vol:
+    - lag_VIX/vol10_6
+    - lag_VIX/vol10_7
+    - lag_VIX/vol10_8
+    - lag_VIX/vol10_9
+    - lag_VIX/vol10_10
+    - lag_VIX/vol10_11
+    - lag_VIX/vol10_12
+  long_lag_over_10_vol:
+    - lag_VIX/vol10_13
+    - lag_VIX/vol10_14
+    - lag_VIX/vol10_15
+    - lag_VIX/vol10_16
+    - lag_VIX/vol10_17
+    - lag_VIX/vol10_18
+    - lag_VIX/vol10_19
+    - lag_VIX/vol10_20
+  short_lag_over_20_vol:
+    - lag_VIX/vol20_1
+    - lag_VIX/vol20_2
+    - lag_VIX/vol20_3
+    - lag_VIX/vol20_4
+    - lag_VIX/vol20_5
+  medium_lag_over_20_vol:
+    - lag_VIX/vol20_6
+    - lag_VIX/vol20_7
+    - lag_VIX/vol20_8
+    - lag_VIX/vol20_9
+    - lag_VIX/vol20_10
+    - lag_VIX/vol20_11
+    - lag_VIX/vol20_12
+  long_lag_over_20_vol:
+    - lag_VIX/vol20_13
+    - lag_VIX/vol20_14
+    - lag_VIX/vol20_15
+    - lag_VIX/vol20_16
+    - lag_VIX/vol20_17
+    - lag_VIX/vol20_18
+    - lag_VIX/vol20_19
+    - lag_VIX/vol20_20
+  short_lag_over_40_vol:
+    - lag_VIX/vol40_1
+    - lag_VIX/vol40_2
+    - lag_VIX/vol40_3
+    - lag_VIX/vol40_4
+    - lag_VIX/vol40_5
+  medium_lag_over_40_vol:
+    - lag_VIX/vol40_6
+    - lag_VIX/vol40_7
+    - lag_VIX/vol40_8
+    - lag_VIX/vol40_9
+    - lag_VIX/vol40_10
+    - lag_VIX/vol40_11
+    - lag_VIX/vol40_12
+  long_lag_over_40_vol:
+    - lag_VIX/vol40_13
+    - lag_VIX/vol40_14
+    - lag_VIX/vol40_15
+    - lag_VIX/vol40_16
+    - lag_VIX/vol40_17
+    - lag_VIX/vol40_18
+    - lag_VIX/vol40_19
+    - lag_VIX/vol40_20
+  skew_over_5-10_vol:
+    - VIX/vol5_Skew_5
+    - VIX/vol5_Skew_10
+    - VIX/vol5_Skew_20
+    - VIX/vol5_Skew_40
+    - VIX/vol10_Skew_5
+    - VIX/vol10_Skew_10
+    - VIX/vol10_Skew_20
+    - VIX/vol10_Skew_40
+  skew_over_20-40_vol:
+    - VIX/vol20_Skew_5
+    - VIX/vol20_Skew_10
+    - VIX/vol20_Skew_20
+    - VIX/vol20_Skew_40
+    - VIX/vol40_Skew_5
+    - VIX/vol40_Skew_10
+    - VIX/vol40_Skew_20
+    - VIX/vol40_Skew_40
+  kurt_over_5-10_vol:
+    - VIX/vol5_Kurt_5
+    - VIX/vol5_Kurt_10
+    - VIX/vol5_Kurt_20
+    - VIX/vol5_Kurt_40
+    - VIX/vol10_Kurt_5
+    - VIX/vol10_Kurt_10
+    - VIX/vol10_Kurt_20
+    - VIX/vol10_Kurt_40
+  kurt_over_20-40_vol:
+    - VIX/vol20_Kurt_5
+    - VIX/vol20_Kurt_10
+    - VIX/vol20_Kurt_20
+    - VIX/vol20_Kurt_40
+    - VIX/vol40_Kurt_5
+    - VIX/vol40_Kurt_10
+    - VIX/vol40_Kurt_20
+    - VIX/vol40_Kurt_40
