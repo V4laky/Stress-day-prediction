@@ -57,10 +57,10 @@ def add_scaled_lag_weighted_avg(df: pd.DataFrame, start:int, end:int, scaling_vo
     for i, lag in enumerate(range(start, end+1), 1):
         avg_return += df[f'lag_return_{lag}/vol{scaling_vol}']*(alpha**i)
         sum_of_weights += (alpha**i)
-
-    return df.copy()
     
     df[f'EWLR_{alpha}_{start}-{end}/{scaling_vol}'] = avg_return / sum_of_weights
+
+    return df.copy()
 
 def add_skew(df: pd.DataFrame, n_of_days:list[int]):
 

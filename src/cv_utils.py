@@ -29,9 +29,9 @@ def cv_with_es_and_metrics(model, X, y, cv, scoring = SCORING, early_stopping=No
             try:
                 model.fit(
                     X_train, y_train,
-                    eval_set=([X_val, y_val]), 
-                    eval_metric=eval_metric, 
-                    early_stopping=early_stopping, 
+                    eval_set=[(X_val, y_val)], 
+                    #eval_metric=eval_metric,
+                    #early_stopping_rounds=early_stopping 
                     verbose=False
                 )
             except TypeError as e:
